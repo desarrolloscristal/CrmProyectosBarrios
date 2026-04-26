@@ -7,7 +7,11 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
   const body = await request.json();
-  const { status, client_name, client_phone, final_price } = body;
+  const {
+    status,
+    client_name, client_phone, client_document,
+    payment_plan, total_price, down_payment, installments_count, installment_amount,
+  } = body;
 
   if (!["disponible", "reservado", "vendido", "bloqueado"].includes(status)) {
     return NextResponse.json({ error: "Estado inválido" }, { status: 400 });
@@ -27,7 +31,12 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     else {
       const { data: created } = await supabase
         .from("clients")
-        .insert({ full_name: client_name, phone: client_phone || null, created_by: user.id })
+        .insert({
+          full_name: client_name,
+          phone: client_phone || null,
+          document_id: client_document || null,
+          created_by: user.id,
+        })
         .select("id").single();
       clientId = created?.id || null;
     }
@@ -40,10 +49,20 @@ export async function PATCH(request: Request, { params }: { params: { id: string
           status: "active", expires_at: expiresAt,
         });
       } else if (status === "vendido") {
+        const tp = Number(total_price) || 0;
         await supabase.from("sales").insert({
           lot_id: params.id, client_id: clientId, seller_id: user.id,
-          final_price: final_price || 0, status: "signed",
-          signed_at: new Date().toISOString(), commission_pct: 3,
+          status: "signed",
+          payment_plan: payment_plan || "contado",
+          total_price: tp,
+          final_price: tp,
+          down_payment: Number(down_payment) || null,
+          installments_count: Number(installments_count) || 0,
+          installment_amount: Number(installment_amount) || null,
+          signed_at: new Date().toISOString(),
+          company_commission_pct: 3,
+          seller_commission_pct: 3,
+          commission_pct: 6,
         });
       }
     }
