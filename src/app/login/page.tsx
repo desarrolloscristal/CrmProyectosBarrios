@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase-client";
 
 export default function LoginPage() {
@@ -21,14 +22,19 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-ink-100/40 p-4">
-      <div className="w-full max-w-sm bg-white rounded-lg border border-ink-200 p-6">
-        <div className="flex items-center gap-3 mb-6 justify-center">
-          <svg viewBox="0 0 60 40" className="w-10 h-7" xmlns="http://www.w3.org/2000/svg">
-            <path d="M5 30 Q15 8 28 18 Q22 12 30 5 Q35 18 30 22 Q42 12 55 30 Z" fill="#3B6D11" />
-          </svg>
-          <div>
-            <div className="font-medium text-ink-900">Cristal Desarrollos</div>
-            <div className="text-[10px] text-brand-600 tracking-[0.2em]">NUEVO SAN VICENTE</div>
+      <div className="w-full max-w-sm bg-white rounded-lg border border-ink-200 p-8 shadow-sm">
+        <div className="flex flex-col items-center mb-7">
+          <Image
+            src="/logo-nuevo-san-vicente.jpeg"
+            alt="Nuevo San Vicente"
+            width={180}
+            height={120}
+            className="h-20 w-auto object-contain mb-4"
+            priority
+          />
+          <div className="text-center">
+            <div className="text-lg font-medium text-ink-900">Cristal Comercializa</div>
+            <div className="text-[10px] text-brand-600 tracking-[0.25em] mt-0.5">NUEVO SAN VICENTE</div>
           </div>
         </div>
 
@@ -57,7 +63,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2 rounded-md bg-brand-600 text-white text-sm hover:bg-brand-700 disabled:opacity-50"
+            className="w-full py-2 rounded-md bg-brand-600 text-white text-sm hover:bg-brand-700 disabled:opacity-50 transition-colors"
           >{loading ? "Ingresando…" : "Ingresar"}</button>
         </form>
       </div>
