@@ -23,6 +23,21 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     .eq("id", params.id);
   if (updErr) return NextResponse.json({ error: updErr.message }, { status: 400 });
 
+  // Si se LIBERA el lote (vuelve a disponible), cancelar reservas y ventas activas
+  if (status === "disponible") {
+    await supabase
+      .from("reservations")
+      .update({ status: "cancelled" })
+      .eq("lot_id", params.id)
+      .eq("status", "active");
+
+    await supabase
+      .from("sales")
+      .update({ status: "cancelled" })
+      .eq("lot_id", params.id)
+      .in("status", ["pending", "signed"]);
+  }
+
   if ((status === "reservado" || status === "vendido") && client_name) {
     let clientId: string | null = null;
     const { data: existing } = await supabase
@@ -50,6 +65,9 @@ export async function PATCH(request: Request, { params }: { params: { id: string
         });
       } else if (status === "vendido") {
         const tp = Number(total_price) || 0;
+        if (tp <= 0) {
+          return NextResponse.json({ error: "El precio total debe ser mayor a 0" }, { status: 400 });
+        }
         await supabase.from("sales").insert({
           lot_id: params.id, client_id: clientId, seller_id: user.id,
           status: "signed",
