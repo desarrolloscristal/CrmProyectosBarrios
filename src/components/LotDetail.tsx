@@ -4,11 +4,24 @@ import { useState } from "react";
 import { X, Ruler, Tag, Sparkles } from "lucide-react";
 import type { Lot } from "@/lib/types";
 import type { LotStatus } from "@/lib/blocks";
+import PaymentPlanSelector, { type PaymentPlanSelection } from "./PaymentPlanSelector";
+import { formatUSD } from "@/lib/payment-plans";
+
+interface ChangeStatusExtras {
+  client_name?: string;
+  client_phone?: string;
+  client_document?: string;
+  payment_plan?: string;
+  total_price?: number;
+  down_payment?: number;
+  installments_count?: number;
+  installment_amount?: number;
+}
 
 interface Props {
   lot: Lot | null;
   onClose: () => void;
-  onChangeStatus: (lotId: string, status: LotStatus, extra?: { client_name?: string; client_phone?: string; final_price?: number }) => Promise<void>;
+  onChangeStatus: (lotId: string, status: LotStatus, extra?: ChangeStatusExtras) => Promise<void>;
   canEdit: boolean;
 }
 
@@ -17,7 +30,8 @@ export default function LotDetail({ lot, onClose, onChangeStatus, canEdit }: Pro
   const [showForm, setShowForm] = useState<LotStatus | null>(null);
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
-  const [finalPrice, setFinalPrice] = useState<string>("");
+  const [clientDoc, setClientDoc] = useState("");
+  const [planSelection, setPlanSelection] = useState<PaymentPlanSelection | null>(null);
 
   if (!lot) {
     return (
@@ -30,18 +44,29 @@ export default function LotDetail({ lot, onClose, onChangeStatus, canEdit }: Pro
   const submit = async (newStatus: LotStatus) => {
     setWorking(newStatus);
     try {
-      const extra: any = {};
+      const extra: ChangeStatusExtras = {};
       if (newStatus === "reservado" || newStatus === "vendido") {
         if (!clientName.trim()) { alert("Ingresá el nombre del cliente"); setWorking(null); return; }
         extra.client_name = clientName.trim();
         extra.client_phone = clientPhone.trim() || undefined;
-        if (newStatus === "vendido" && finalPrice) extra.final_price = Number(finalPrice);
+        extra.client_document = clientDoc.trim() || undefined;
+
+        if (newStatus === "vendido") {
+          if (!planSelection || planSelection.totalPrice <= 0) {
+            alert("Seleccioná un plan de pago válido"); setWorking(null); return;
+          }
+          extra.payment_plan = planSelection.code;
+          extra.total_price = planSelection.totalPrice;
+          extra.down_payment = planSelection.downPayment;
+          extra.installments_count = planSelection.installments;
+          extra.installment_amount = planSelection.installmentAmount;
+        }
       }
       await onChangeStatus(lot.id, newStatus, extra);
       setShowForm(null);
-      setClientName(""); setClientPhone(""); setFinalPrice("");
-    } catch (e: any) {
-      alert("Error: " + (e?.message || "no se pudo actualizar"));
+      setClientName(""); setClientPhone(""); setClientDoc(""); setPlanSelection(null);
+    } catch (e: unknown) {
+      alert("Error: " + (e instanceof Error ? e.message : "no se pudo actualizar"));
     } finally {
       setWorking(null);
     }
@@ -65,7 +90,7 @@ export default function LotDetail({ lot, onClose, onChangeStatus, canEdit }: Pro
         <button onClick={onClose} className="text-ink-600 hover:text-ink-900 p-1"><X size={18} /></button>
       </div>
 
-      <div className="p-4 space-y-3">
+      <div className="p-4 space-y-3 max-h-[80vh] overflow-y-auto">
         <div className="inline-block px-3 py-1 rounded-full text-xs font-medium" style={{ background: sb.bg, color: sb.fg }}>
           {sb.label}
         </div>
@@ -75,7 +100,7 @@ export default function LotDetail({ lot, onClose, onChangeStatus, canEdit }: Pro
           <span>Superficie: <span className="text-ink-900 font-medium">{lot.area_m2 ? `${lot.area_m2} m²` : "—"}</span></span>
         </div>
 
-        {(lot.list_price || lot.presale_price) && (
+        {!showForm && (lot.list_price || lot.presale_price) && (
           <div className="space-y-2 pt-1">
             {lot.presale_price && (
               <div className="rounded-md p-3 bg-brand-50 border border-brand-400/40 relative overflow-hidden">
@@ -84,7 +109,7 @@ export default function LotDetail({ lot, onClose, onChangeStatus, canEdit }: Pro
                 </div>
                 <div className="text-[11px] text-brand-700 uppercase tracking-wide font-medium">Precio promocional</div>
                 <div className="text-2xl font-medium text-brand-900 mt-0.5">
-                  {lot.currency} {Number(lot.presale_price).toLocaleString("es-AR")}
+                  {formatUSD(Number(lot.presale_price))}
                 </div>
               </div>
             )}
@@ -95,14 +120,8 @@ export default function LotDetail({ lot, onClose, onChangeStatus, canEdit }: Pro
                   <span>Precio de lista</span>
                 </div>
                 <div className={lot.presale_price ? "text-ink-600 line-through" : "text-ink-900 font-medium"}>
-                  {lot.currency} {Number(lot.list_price).toLocaleString("es-AR")}
+                  {formatUSD(Number(lot.list_price))}
                 </div>
-              </div>
-            )}
-            {lot.list_price && lot.presale_price && (
-              <div className="text-[11px] text-brand-700 px-1">
-                Ahorro: {lot.currency} {(Number(lot.list_price) - Number(lot.presale_price)).toLocaleString("es-AR")}
-                <span className="text-ink-600"> ({Math.round((1 - Number(lot.presale_price)/Number(lot.list_price)) * 100)}% off)</span>
               </div>
             )}
           </div>
@@ -133,9 +152,9 @@ export default function LotDetail({ lot, onClose, onChangeStatus, canEdit }: Pro
         )}
 
         {canEdit && showForm && (
-          <div className="pt-3 border-t border-ink-100 space-y-2">
-            <div className="text-xs text-ink-600">
-              Datos del cliente para {showForm === "reservado" ? "reservar" : "marcar como vendido"}
+          <div className="pt-3 border-t border-ink-100 space-y-3">
+            <div className="text-xs text-ink-600 font-medium">
+              {showForm === "reservado" ? "Datos del cliente para reservar" : "Datos para registrar la venta"}
             </div>
             <input
               value={clientName}
@@ -143,29 +162,33 @@ export default function LotDetail({ lot, onClose, onChangeStatus, canEdit }: Pro
               placeholder="Nombre completo del cliente"
               className="w-full px-3 py-2 border border-ink-200 rounded-md text-sm focus:outline-none focus:border-brand-600"
             />
-            <input
-              value={clientPhone}
-              onChange={e => setClientPhone(e.target.value)}
-              placeholder="Teléfono (opcional)"
-              className="w-full px-3 py-2 border border-ink-200 rounded-md text-sm focus:outline-none focus:border-brand-600"
-            />
-            {showForm === "vendido" && (
+            <div className="grid grid-cols-2 gap-2">
               <input
-                type="number"
-                value={finalPrice}
-                onChange={e => setFinalPrice(e.target.value)}
-                placeholder={lot.presale_price ? `Sugerido: ${lot.presale_price} (pre-venta)` : `Precio final en ${lot.currency}`}
-                className="w-full px-3 py-2 border border-ink-200 rounded-md text-sm focus:outline-none focus:border-brand-600"
+                value={clientDoc}
+                onChange={e => setClientDoc(e.target.value)}
+                placeholder="DNI"
+                className="px-3 py-2 border border-ink-200 rounded-md text-sm focus:outline-none focus:border-brand-600"
               />
+              <input
+                value={clientPhone}
+                onChange={e => setClientPhone(e.target.value)}
+                placeholder="Teléfono"
+                className="px-3 py-2 border border-ink-200 rounded-md text-sm focus:outline-none focus:border-brand-600"
+              />
+            </div>
+
+            {showForm === "vendido" && (
+              <PaymentPlanSelector onChange={setPlanSelection} />
             )}
-            <div className="flex gap-2">
+
+            <div className="flex gap-2 pt-2">
               <button
                 onClick={() => submit(showForm)}
                 disabled={working !== null}
-                className={`flex-1 px-3 py-2 rounded-md text-sm text-white ${showForm === "reservado" ? "bg-status-reserved" : "bg-status-sold"} hover:opacity-90`}
+                className={`flex-1 px-3 py-2 rounded-md text-sm text-white ${showForm === "reservado" ? "bg-status-reserved" : "bg-status-sold"} hover:opacity-90 disabled:opacity-50`}
               >{working ? "Guardando…" : "Confirmar"}</button>
               <button
-                onClick={() => setShowForm(null)}
+                onClick={() => { setShowForm(null); setPlanSelection(null); }}
                 className="px-3 py-2 rounded-md text-sm border border-ink-200 hover:bg-ink-100"
               >Cancelar</button>
             </div>
