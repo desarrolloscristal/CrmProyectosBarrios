@@ -2,7 +2,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Cristal Desarrollos · Nuevo San Vicente",
+  title: "Cristal Comercializa · Nuevo San Vicente",
   description: "Sistema de gestión de lotes",
 };
 
