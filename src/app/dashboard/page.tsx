@@ -5,28 +5,22 @@ import Header from "@/components/Header";
 import Masterplan from "@/components/Masterplan";
 import LotDetail from "@/components/LotDetail";
 import { createClient } from "@/lib/supabase-client";
-import { BLOCKS } from "@/lib/blocks";
+import { useProfile } from "@/lib/use-profile";
 import type { LotStatus } from "@/lib/blocks";
 import type { Lot } from "@/lib/types";
 
 export default function DashboardPage() {
   const supabase = createClient();
+  const { profile } = useProfile();
   const [lots, setLots] = useState<Lot[]>([]);
   const [statusMap, setStatusMap] = useState<Record<string, LotStatus>>({});
   const [selected, setSelected] = useState<{ code: string; num: number } | null>(null);
   const [selectedLot, setSelectedLot] = useState<Lot | null>(null);
   const [filterEtapa, setFilterEtapa] = useState<1 | 2 | "all">("all");
-  const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    setUser(user);
-
-    const { data, error } = await supabase
-      .from("lots_view")
-      .select("*");
-
+    const { data, error } = await supabase.from("lots_view").select("*");
     if (!error && data) {
       setLots(data as Lot[]);
       const map: Record<string, LotStatus> = {};
@@ -54,7 +48,7 @@ export default function DashboardPage() {
 
   const handleLotClick = (code: string, num: number) => setSelected({ code, num });
 
-  const handleStatusChange = async (lotId: string, newStatus: LotStatus, extra?: any) => {
+  const handleStatusChange = async (lotId: string, newStatus: LotStatus, extra?: Record<string, unknown>) => {
     const res = await fetch(`/api/lots/${lotId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -64,10 +58,9 @@ export default function DashboardPage() {
     await fetchData();
   };
 
-  const userMeta = user?.user_metadata || {};
   return (
     <div className="min-h-screen bg-ink-100/40">
-      <Header userName={userMeta.full_name || user?.email} role={userMeta.role || "vendedor"} />
+      <Header userName={profile?.full_name || "..."} role={profile?.role} />
       <main className="max-w-7xl mx-auto p-4 sm:p-6">
         <div className="mb-4 flex items-center gap-2">
           <h1 className="text-xl font-medium">Masterplan</h1>
@@ -82,7 +75,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
           <div>
             {loading ? (
               <div className="bg-white rounded-lg border border-ink-200 h-96 flex items-center justify-center text-ink-600">Cargando masterplan…</div>
@@ -100,7 +93,7 @@ export default function DashboardPage() {
               lot={selectedLot}
               onClose={() => setSelected(null)}
               onChangeStatus={handleStatusChange}
-              canEdit={!!user}
+              canEdit={!!profile && profile.role !== "viewer"}
             />
           </div>
         </div>
