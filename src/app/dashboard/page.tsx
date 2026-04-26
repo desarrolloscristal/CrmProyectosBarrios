@@ -9,6 +9,17 @@ import { useProfile } from "@/lib/use-profile";
 import type { LotStatus } from "@/lib/blocks";
 import type { Lot } from "@/lib/types";
 
+interface ChangeStatusExtras {
+  client_name?: string;
+  client_phone?: string;
+  client_document?: string;
+  payment_plan?: string;
+  total_price?: number;
+  down_payment?: number;
+  installments_count?: number;
+  installment_amount?: number;
+}
+
 export default function DashboardPage() {
   const supabase = createClient();
   const { profile } = useProfile();
@@ -48,7 +59,7 @@ export default function DashboardPage() {
 
   const handleLotClick = (code: string, num: number) => setSelected({ code, num });
 
-  const handleStatusChange = async (lotId: string, newStatus: LotStatus, extra?: Record<string, unknown>) => {
+  const handleStatusChange = async (lotId: string, newStatus: LotStatus, extra?: ChangeStatusExtras) => {
     const res = await fetch(`/api/lots/${lotId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
