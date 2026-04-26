@@ -62,13 +62,13 @@ export default function Masterplan({
       <div className="relative bg-[#fafaf7] rounded-lg border border-ink-200 overflow-hidden">
         <Legend />
         <svg
-          viewBox="0 0 720 360"
+          viewBox="0 0 620 360"
           xmlns="http://www.w3.org/2000/svg"
           className="w-full h-auto block"
-          style={{ aspectRatio: "720 / 360" }}
+          style={{ aspectRatio: "620 / 360" }}
         >
-          <rect x="8" y="6" width="306" height="150" fill="none" stroke="#378ADD" strokeWidth="0.5" strokeDasharray="2 1.5" opacity="0.5" rx="3" />
-          <rect x="308" y="130" width="392" height="220" fill="none" stroke="#378ADD" strokeWidth="0.5" strokeDasharray="2 1.5" opacity="0.5" rx="3" />
+          <rect x="8" y="6" width="306" height="345" fill="none" stroke="#378ADD" strokeWidth="0.5" strokeDasharray="2 1.5" opacity="0.5" rx="3" />
+          <rect x="308" y="130" width="292" height="220" fill="none" stroke="#378ADD" strokeWidth="0.5" strokeDasharray="2 1.5" opacity="0.5" rx="3" />
 
           {AMENITIES.map(a => (
             <g key={a.code}>
